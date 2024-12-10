@@ -805,7 +805,8 @@ static int sgcard_get_dtb_info(struct platform_device *pdev, struct sg_card *car
 			pr_err("vtty%d get irq num failed\n", i);
 			goto free_request;
 		} else {
-			cpu = i % cpus;
+			//cpu = i % cpus;
+			cpu = 0;
 			irq_set_affinity(card->channel[i].irq, get_cpu_mask(cpu));
 			pr_err("ch%d irq:%llu->cpu%u\n", i, card->channel[i].irq, cpu);
 		}
@@ -1232,14 +1233,17 @@ static long sg_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		sophgo_setup_c2c();
 		for (c2c_loop = 0; c2c_loop < 20; c2c_loop++) {
 			c2c_ok = sophgo_check_c2c();
-			if (c2c_ok)
+			if (c2c_ok < 0)
 				break;
 			msleep(1000);
 		}
 
-		if (c2c_ok == 0)
+		if (c2c_ok >= 0) {
+			if (copy_to_user((void __user *)arg, &c2c_ok, sizeof(c2c_ok)))
+				pr_err("failed copy to userspace\n");
+
 			return -EFAULT;
-		else
+		} else
 			pr_err("all c2c link up success\n");
 
 		break;
